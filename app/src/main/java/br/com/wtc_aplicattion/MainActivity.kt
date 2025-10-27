@@ -16,6 +16,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import br.com.wtc_aplicattion.models.Cliente
 import br.com.wtc_aplicattion.models.TipoUsuario
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 
 /**
  * Activity principal do aplicativo WTC CRM.
@@ -54,12 +57,24 @@ fun WTCApplicationApp() {
     }
 
     // Simular notificação push após login do cliente
-    LaunchedEffect(appState.usuarioLogado) {
+    LaunchedEffect(appState.usuarioLogado?.tipo) {
         if (appState.usuarioLogado?.tipo == TipoUsuario.CLIENTE) {
             kotlinx.coroutines.delay(3000)
-            appState.notificacaoAtual = appState.campanhas.firstOrNull()
-            appState.mostrarNotificacao = true
+            // Verificar se ainda é cliente após o delay
+            if (appState.usuarioLogado?.tipo == TipoUsuario.CLIENTE && !appState.mostrarNotificacao) {
+                appState.notificacaoAtual = appState.campanhas.firstOrNull()
+                appState.mostrarNotificacao = true
+            }
+        } else {
+            // Limpar notificação quando não for cliente
+            appState.mostrarNotificacao = false
+            appState.notificacaoAtual = null
         }
+    }
+
+    // Debug: Log do estado da notificação (remover após teste)
+    LaunchedEffect(appState.mostrarNotificacao, appState.notificacaoAtual) {
+        println("🔔 DEBUG: mostrarNotificacao = ${appState.mostrarNotificacao}, notificacaoAtual = ${appState.notificacaoAtual?.title}")
     }
 
     // Define o grafo de navegação do aplicativo
@@ -150,14 +165,23 @@ fun WTCApplicationApp() {
             )
         }
     }
+
+    // Exibir notificação popup quando necessário (fora do NavHost)
+    if (appState.mostrarNotificacao && appState.notificacaoAtual != null) {
+        println("🔔 RENDER: Tentando renderizar popup")
+        
+        // Usar o componente NotificacaoPopup original
+        br.com.wtc_aplicattion.components.NotificacaoPopup(
+            campanha = appState.notificacaoAtual!!,
+            onDismiss = {
+                println("🔔 DISMISS: Popup foi fechado")
+                appState.mostrarNotificacao = false
+                appState.notificacaoAtual = null
+            }
+        )
+    } else {
+        println("🔔 RENDER: Condições não atendidas - mostrarNotificacao: ${appState.mostrarNotificacao}, notificacaoAtual: ${appState.notificacaoAtual?.title}")
+    }
 }
 
-@Composable
-fun ConfiguracoesScreen(navController: NavHostController, appState: AppState) {
-    TODO("Not yet implemented")
-}
-
-@Composable
-fun PerfilClienteScreen(navController: NavHostController, appState: AppState, cliente: Cliente) {
-    TODO("Not yet implemented")
-}
+// Funções movidas para arquivos separados

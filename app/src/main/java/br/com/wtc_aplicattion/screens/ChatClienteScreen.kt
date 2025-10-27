@@ -48,6 +48,17 @@ fun ChatClienteScreen(navController: NavController, appState: AppState) {
                     titleContentColor = Color.White
                 ),
                 actions = {
+                    // Botão de teste para notificação (TEMPORÁRIO - REMOVER APÓS TESTE)
+                    IconButton(onClick = {
+                        println("🔔 TESTE: Clicou no botão de notificação")
+                        println("🔔 TESTE: Campanhas disponíveis: ${appState.campanhas.size}")
+                        appState.notificacaoAtual = appState.campanhas.firstOrNull()
+                        appState.mostrarNotificacao = true
+                        println("🔔 TESTE: notificacaoAtual = ${appState.notificacaoAtual?.title}")
+                        println("🔔 TESTE: mostrarNotificacao = ${appState.mostrarNotificacao}")
+                    }) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Testar Notificação", tint = Color.White)
+                    }
                     IconButton(onClick = {
                         authViewModel.signOut()
                         appState.usuarioLogado = null

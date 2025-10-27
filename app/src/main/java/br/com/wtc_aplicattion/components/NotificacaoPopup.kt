@@ -20,6 +20,7 @@ import br.com.wtc_aplicattion.models.Campanha
 
 @Composable
 fun NotificacaoPopup(campanha: Campanha, onDismiss: () -> Unit) {
+    println("🔔 POPUP: Renderizando NotificacaoPopup com título: ${campanha.title}")
     Box(
         modifier = Modifier
             .fillMaxSize()

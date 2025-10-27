@@ -59,7 +59,6 @@ class AuthViewModel : ViewModel() {
     }
 
     private fun createUserFromFirebase(firebaseUser: FirebaseUser): Usuario {
-        // TODO = Estamos determinando o tipo de usuário baseado no email, a ser alterado futuramente
         val tipoUsuario = if (firebaseUser.email?.contains("operador") == true) {
             TipoUsuario.OPERADOR
         } else {

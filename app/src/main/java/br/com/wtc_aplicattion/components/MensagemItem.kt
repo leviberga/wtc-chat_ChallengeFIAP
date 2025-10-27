@@ -33,6 +33,9 @@ fun MensagemItem(mensagem: Mensagem, appState: AppState) {
                             if (index != -1) {
                                 appState.mensagens[index] = mensagem.copy(importante = !mensagem.importante)
                             }
+                        } else if (offsetX < -100) {
+                            // Gestão de tarefa: criar tarefa a partir da mensagem
+                            // TODO: Implementar criação de tarefa
                         }
                         offsetX = 0f
                     },
