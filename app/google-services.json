@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "190140449335",
+    "project_id": "wtcaplicattion-9012b",
+    "storage_bucket": "wtcaplicattion-9012b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:190140449335:android:c931ac3ac1c4683fb475b2",
+        "android_client_info": {
+          "package_name": "br.com.wtc_aplicattion"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO3ea5NOTkdg6ZOgMTv7oMgeyY7o79fYQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
