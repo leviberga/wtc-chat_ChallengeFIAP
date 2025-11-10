@@ -22,14 +22,21 @@ Algumas imagens das principais telas do app.
 
 ![Login](docs/screenshots/LoginScreen.png)
 
-Telas do operador:
+## Telas do operador:
 
-![Dashboard](docs/screenshots/Dashboard.png)
+### Dashboard
+![Dashboard](docs/screenshots/DashboardScreen.png)
+
+### Chat
 ![Chat](docs/screenshots/ChatScreen.png)
+
+### Notas
 ![Notas](docs/screenshots/Notes.png)
+
+### Criar campanhas
 ![Criar campanhas](docs/screenshots/NewCampaign.png)
 
-Visão do cliente (Chat e notificações):
+## Visão do cliente (Chat e notificações):
 ![PopUp](docs/screenshots/PopUp.png)
 
 
@@ -160,7 +167,9 @@ Dicas:
 
 ## Contato
 
-Desenvolvido por:
+[![Email](https://skillicons.dev/icons?i=gmail)](mailto:lbergamascki@gmail.com)
+[![LinkedIn](https://skillicons.dev/icons?i=linkedin)](https://www.linkedin.com/in/levi-bergamascki/)
 
-![Levi Bergamascki](https://github.com/leviberga)
-![Lanna Fábia](https://github.com/Lannizz)
+## Autor
+
+Desenvolvido por [Levi Bergamascki](https://github.com/leviberga) e [Lanna Fábia](https://github.com/Lannizz)
