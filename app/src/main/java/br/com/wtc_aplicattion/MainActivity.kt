@@ -19,6 +19,7 @@ import br.com.wtc_aplicattion.models.TipoUsuario
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import br.com.wtc_aplicattion.services.TokenManager
 
 /**
  * Activity principal do aplicativo WTC CRM.
@@ -27,6 +28,7 @@ import androidx.compose.material3.TextButton
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TokenManager.init(applicationContext)
         setContent {
             // Aplica o tema do aplicativo
             WTCApplicationTheme {
@@ -106,7 +108,7 @@ fun WTCApplicationApp() {
 
         // Tela de Chat - Conversa com cliente específico
         composable("chat/{clienteId}") { backStackEntry ->
-            val clienteId = backStackEntry.arguments?.getString("clienteId")?.toIntOrNull()
+            val clienteId = backStackEntry.arguments?.getString("clienteId")
             val cliente = appState.clientes.find { it.id == clienteId }
 
             if (cliente != null) {
@@ -141,7 +143,7 @@ fun WTCApplicationApp() {
 
         // Tela de Perfil do Cliente (adicional)
         composable("perfil/{clienteId}") { backStackEntry ->
-            val clienteId = backStackEntry.arguments?.getString("clienteId")?.toIntOrNull()
+            val clienteId = backStackEntry.arguments?.getString("clienteId")
             val cliente = appState.clientes.find { it.id == clienteId }
 
             if (cliente != null) {

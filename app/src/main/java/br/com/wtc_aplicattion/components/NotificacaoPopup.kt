@@ -1,6 +1,5 @@
 package br.com.wtc_aplicattion.components
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,7 +19,6 @@ import br.com.wtc_aplicattion.models.Campanha
 
 @Composable
 fun NotificacaoPopup(campanha: Campanha, onDismiss: () -> Unit) {
-    println("🔔 POPUP: Renderizando NotificacaoPopup com título: ${campanha.title}")
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -74,29 +72,34 @@ fun NotificacaoPopup(campanha: Campanha, onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // body → content
                 Text(
-                    campanha.body,
+                    campanha.content,
                     fontSize = 14.sp,
                     color = Color(0xFF4B5563)
                 )
 
+                if (campanha.deeplinkUrl != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "🔗 ${campanha.deeplinkUrl}",
+                        fontSize = 12.sp,
+                        color = Color(0xFF2563EB),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Row(
+                // actions foi removido do model — botão fixo de fechar
+                Button(
+                    onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2563EB)
+                    )
                 ) {
-                    campanha.actions.forEach { action ->
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF2563EB)
-                            )
-                        ) {
-                            Text(action.title)
-                        }
-                    }
+                    Text("Ver mais")
                 }
             }
         }

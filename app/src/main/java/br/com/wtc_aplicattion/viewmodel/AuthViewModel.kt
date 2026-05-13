@@ -5,20 +5,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import br.com.wtc_aplicattion.models.LoginRequest
 import br.com.wtc_aplicattion.models.TipoUsuario
 import br.com.wtc_aplicattion.models.Usuario
-import br.com.wtc_aplicattion.services.AuthService
-import br.com.wtc_aplicattion.services.AuthResult
-import com.google.firebase.auth.FirebaseUser
+import br.com.wtc_aplicattion.services.RetrofitClient
+import br.com.wtc_aplicattion.services.TokenManager
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel para gerenciar o estado de autenticação
- */
 class AuthViewModel : ViewModel() {
-    private val authService = AuthService()
 
-    // Estado da autenticação
+    private val api = RetrofitClient.instance
+
     var isLoggedIn by mutableStateOf(false)
         private set
 
@@ -31,7 +28,6 @@ class AuthViewModel : ViewModel() {
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    // Estado dos campos de login
     var email by mutableStateOf("")
         private set
 
@@ -45,30 +41,18 @@ class AuthViewModel : ViewModel() {
         private set
 
     init {
-
         checkAuthState()
     }
 
-
     private fun checkAuthState() {
-        isLoggedIn = authService.isUserLoggedIn()
-        if (isLoggedIn) {
-            val firebaseUser = authService.getCurrentUser()
-            currentUser = firebaseUser?.let { createUserFromFirebase(it) }
+        val token = TokenManager.getToken()
+        if (token != null) {
+            isLoggedIn = true
+            currentUser = Usuario(
+                nome = TokenManager.getEmail() ?: "Usuário",
+                tipo = if (TokenManager.getRole() == "OPERATOR") TipoUsuario.OPERADOR else TipoUsuario.CLIENTE
+            )
         }
-    }
-
-    private fun createUserFromFirebase(firebaseUser: FirebaseUser): Usuario {
-        val tipoUsuario = if (firebaseUser.email?.contains("operador") == true) {
-            TipoUsuario.OPERADOR
-        } else {
-            TipoUsuario.CLIENTE
-        }
-        
-        return Usuario(
-            nome = firebaseUser.displayName ?: firebaseUser.email?.substringBefore("@") ?: "Usuário",
-            tipo = tipoUsuario
-        )
     }
 
     fun signIn() {
@@ -81,16 +65,23 @@ class AuthViewModel : ViewModel() {
         errorMessage = null
 
         viewModelScope.launch {
-            when (val result = authService.signInWithEmailAndPassword(email, password)) {
-                is AuthResult.Success -> {
+            try {
+                val response = api.login(LoginRequest(email, password))
+                if (response.isSuccessful) {
+                    val body = response.body()!!
+                    TokenManager.saveToken(body.token, body.refreshToken, body.email, body.role)
+                    currentUser = Usuario(
+                        nome = body.name,
+                        tipo = if (body.role == "OPERATOR") TipoUsuario.OPERADOR else TipoUsuario.CLIENTE
+                    )
                     isLoggedIn = true
-                    currentUser = result.user?.let { createUserFromFirebase(it) }
-                    isLoading = false
+                } else {
+                    errorMessage = "Email ou senha inválidos"
                 }
-                is AuthResult.Error -> {
-                    errorMessage = result.message
-                    isLoading = false
-                }
+            } catch (e: Exception) {
+                errorMessage = "Erro de conexão: ${e.message}"
+            } finally {
+                isLoading = false
             }
         }
     }
@@ -115,75 +106,38 @@ class AuthViewModel : ViewModel() {
         errorMessage = null
 
         viewModelScope.launch {
-            when (val result = authService.createUserWithEmailAndPassword(email, password)) {
-                is AuthResult.Success -> {
+            try {
+                val response = api.register(LoginRequest(email, password))
+                if (response.isSuccessful) {
+                    val body = response.body()!!
+                    TokenManager.saveToken(body.token, body.refreshToken, body.email, body.role)
+                    currentUser = Usuario(
+                        nome = body.name,
+                        tipo = if (body.role == "OPERATOR") TipoUsuario.OPERADOR else TipoUsuario.CLIENTE
+                    )
                     isLoggedIn = true
-                    currentUser = result.user?.let { createUserFromFirebase(it) }
-                    isLoading = false
+                } else {
+                    errorMessage = "Erro ao criar conta"
                 }
-                is AuthResult.Error -> {
-                    errorMessage = result.message
-                    isLoading = false
-                }
+            } catch (e: Exception) {
+                errorMessage = "Erro de conexão: ${e.message}"
+            } finally {
+                isLoading = false
             }
         }
     }
+
     fun signOut() {
-        authService.signOut()
+        TokenManager.clearToken()
         isLoggedIn = false
         currentUser = null
         clearFields()
     }
 
-    fun resetPassword() {
-        if (email.isBlank()) {
-            errorMessage = "Digite seu email para redefinir a senha"
-            return
-        }
-
-        isLoading = true
-        errorMessage = null
-
-        viewModelScope.launch {
-            when (val result = authService.sendPasswordResetEmail(email)) {
-                is AuthResult.Success -> {
-                    errorMessage = "Email de redefinição enviado!"
-                    isLoading = false
-                }
-                is AuthResult.Error -> {
-                    errorMessage = result.message
-                    isLoading = false
-                }
-            }
-        }
-    }
-
-    fun updateEmail(newEmail: String) {
-        email = newEmail
-    }
-
-    fun updatePassword(newPassword: String) {
-        password = newPassword
-    }
-
-    fun updateConfirmPassword(newConfirmPassword: String) {
-        confirmPassword = newConfirmPassword
-    }
-
-    fun toggleSignUpMode() {
-        isSignUpMode = !isSignUpMode
-        clearFields()
-    }
-
-    fun clearFields() {
-        email = ""
-        password = ""
-        confirmPassword = ""
-        errorMessage = null
-    }
-
-    fun clearError() {
-        errorMessage = null
-    }
+    fun updateEmail(newEmail: String) { email = newEmail }
+    fun updatePassword(newPassword: String) { password = newPassword }
+    fun updateConfirmPassword(newConfirmPassword: String) { confirmPassword = newConfirmPassword }
+    fun toggleSignUpMode() { isSignUpMode = !isSignUpMode; clearFields() }
+    fun clearFields() { email = ""; password = ""; confirmPassword = ""; errorMessage = null }
+    fun clearError() { errorMessage = null }
 }
-

@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,7 +30,7 @@ import br.com.wtc_aplicattion.models.Mensagem
 fun ChatScreen(navController: NavController, appState: AppState, cliente: Cliente) {
     var novaMensagem by remember { mutableStateOf("") }
     var mostrarNotas by remember { mutableStateOf(false) }
-    var notasTemp by remember { mutableStateOf(cliente.notas) }
+    var notasTemp by remember { mutableStateOf(cliente.notas ?: "") }
 
     val mensagensCliente = appState.mensagens.filter { it.clienteId == cliente.id }
 
@@ -110,11 +112,15 @@ fun ChatScreen(navController: NavController, appState: AppState, cliente: Client
 
                                 appState.mensagens.add(
                                     Mensagem(
-                                        id = appState.mensagens.size + 1,
-                                        clienteId = cliente.id,
-                                        remetente = "operador",
-                                        conteudo = conteudo,
-                                        timestamp = AppState.Companion.getCurrentTime()
+                                          id = (appState.mensagens.size + 1).toString(),
+                                          conversationId = cliente.id,
+                                          senderId = "operador",
+                                          conteudo = conteudo,
+                                          tipo = "TEXT",
+                                          mediaUrl = null,
+                                          deeplinkUrl = null,
+                                          status = "SENT",
+                                          timestamp = AppState.getCurrentTime()
                                     )
                                 )
                                 novaMensagem = ""
@@ -165,7 +171,7 @@ fun ChatScreen(navController: NavController, appState: AppState, cliente: Client
                     },
                     dismissButton = {
                         TextButton(onClick = {
-                            notasTemp = cliente.notas
+                            notasTemp = cliente.notas ?: ""
                             mostrarNotas = false
                         }) {
                             Text("Cancelar")

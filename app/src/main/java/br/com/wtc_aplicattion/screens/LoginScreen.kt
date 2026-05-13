@@ -262,23 +262,10 @@ fun LoginScreen(navController: NavController, appState: AppState) {
                     )
                 }
 
-                // Botão para redefinir senha (apenas no modo login)
-                if (!authViewModel.isSignUpMode) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(
-                        onClick = authViewModel::resetPassword
-                    ) {
-                        Text(
-                            "Esqueceu a senha?",
-                            color = Color(0xFF6B7280)
-                        )
-                    }
-                }
-
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    "WTC Challenge - Firebase Auth",
+                    "WTC Challenge - Sprint 2",
                     fontSize = 12.sp,
                     color = Color(0xFF9CA3AF)
                 )

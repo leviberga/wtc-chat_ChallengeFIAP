@@ -113,7 +113,6 @@ fun PerfilClienteScreen(
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
                     InfoRow("Status", cliente.status, Icons.Default.CheckCircle)
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    InfoRow("Última Compra", cliente.ultimaCompra, Icons.Default.ShoppingCart)
                 }
             }
 

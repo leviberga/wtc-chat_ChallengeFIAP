@@ -1,6 +1,5 @@
 package br.com.wtc_aplicattion.screens
 
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,7 +19,6 @@ import br.com.wtc_aplicattion.components.MensagemClienteItem
 import br.com.wtc_aplicattion.models.Mensagem
 import br.com.wtc_aplicattion.viewmodel.AppState
 import br.com.wtc_aplicattion.viewmodel.AuthViewModel
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +26,7 @@ fun ChatClienteScreen(navController: NavController, appState: AppState) {
     val authViewModel = remember { AuthViewModel() }
     var novaMensagem by remember { mutableStateOf("") }
 
-    val mensagensCliente = appState.mensagens.filter { it.clienteId == 1 }
+    val mensagensCliente = appState.mensagens.filter { it.clienteId == "conv_cliente" }
 
     Scaffold(
         topBar = {
@@ -48,16 +46,15 @@ fun ChatClienteScreen(navController: NavController, appState: AppState) {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    // Botão de teste para notificação (TEMPORÁRIO - REMOVER APÓS TESTE)
                     IconButton(onClick = {
-                        println("🔔 TESTE: Clicou no botão de notificação")
-                        println("🔔 TESTE: Campanhas disponíveis: ${appState.campanhas.size}")
                         appState.notificacaoAtual = appState.campanhas.firstOrNull()
                         appState.mostrarNotificacao = true
-                        println("🔔 TESTE: notificacaoAtual = ${appState.notificacaoAtual?.title}")
-                        println("🔔 TESTE: mostrarNotificacao = ${appState.mostrarNotificacao}")
                     }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Testar Notificação", tint = Color.White)
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = "Notificação",
+                            tint = Color.White
+                        )
                     }
                     IconButton(onClick = {
                         authViewModel.signOut()
@@ -66,7 +63,11 @@ fun ChatClienteScreen(navController: NavController, appState: AppState) {
                             popUpTo(0) { inclusive = true }
                         }
                     }) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Sair", tint = Color.White)
+                        Icon(
+                            Icons.Default.ExitToApp,
+                            contentDescription = "Sair",
+                            tint = Color.White
+                        )
                     }
                 }
             )
@@ -98,28 +99,18 @@ fun ChatClienteScreen(navController: NavController, appState: AppState) {
                             if (novaMensagem.isNotBlank()) {
                                 appState.mensagens.add(
                                     Mensagem(
-                                        id = appState.mensagens.size + 1,
-                                        clienteId = 1,
-                                        remetente = "cliente",
+                                        id = (appState.mensagens.size + 1).toString(),
+                                        conversationId = "conv_cliente",
+                                        senderId = "cliente",
                                         conteudo = novaMensagem,
+                                        tipo = "TEXT",
+                                        mediaUrl = null,
+                                        deeplinkUrl = null,
+                                        status = "SENT",
                                         timestamp = AppState.getCurrentTime()
                                     )
                                 )
                                 novaMensagem = ""
-
-                                // Simular resposta automática
-                                kotlinx.coroutines.GlobalScope.launch {
-                                    kotlinx.coroutines.delay(2000)
-                                    appState.mensagens.add(
-                                        Mensagem(
-                                            id = appState.mensagens.size + 1,
-                                            clienteId = 1,
-                                            remetente = "operador",
-                                            conteudo = "Obrigado pela mensagem! Um atendente responderá em breve.",
-                                            timestamp = AppState.getCurrentTime()
-                                        )
-                                    )
-                                }
                             }
                         },
                         containerColor = Color(0xFF4F46E5)

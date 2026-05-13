@@ -111,14 +111,9 @@ fun ClienteCard(cliente: Cliente, onClick: () -> Unit) {
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
-                Text(
-                    "🛒 ${cliente.ultimaCompra}",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
             }
 
-            if (cliente.notas.isNotEmpty()) {
+            if (!cliente.notas.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "📝 ${cliente.notas}",

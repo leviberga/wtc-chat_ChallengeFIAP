@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -19,18 +20,23 @@ import br.com.wtc_aplicattion.viewmodel.AuthViewModel
 
 import br.com.wtc_aplicattion.components.ClienteCard
 import br.com.wtc_aplicattion.components.MenuItem
+import br.com.wtc_aplicattion.viewmodel.CustomerViewModel
 import kotlinx.coroutines.launch // <-- IMPORTAR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CRMScreen(navController: NavController, appState: AppState) {
     val authViewModel = remember { AuthViewModel() }
+    val customerViewModel = remember { CustomerViewModel() }
+    LaunchedEffect(Unit) {
+        customerViewModel.loadClientes()
+    }
     var busca by remember { mutableStateOf("") }
     var filtroTag by remember { mutableStateOf("") }
     var filtroStatus by remember { mutableStateOf("") }
     var menuAberto by remember { mutableStateOf(false) }
 
-    // --- ADIÇÕES PARA O POPUP IN-APP ---
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     // Armazena o ID da última mensagem de cliente que gerou notificação
@@ -38,33 +44,19 @@ fun CRMScreen(navController: NavController, appState: AppState) {
 
     // Efeito que observa mudanças na lista de mensagens
     LaunchedEffect(appState.mensagens.size) {
-        // Pega a última mensagem, se existir
         val ultimaMensagem = appState.mensagens.lastOrNull()
-
-        if (ultimaMensagem != null) {
-            // Verifica se é uma mensagem nova, do cliente, e que ainda não foi notificada
-            if (ultimaMensagem.remetente == "cliente" && ultimaMensagem.id > lastNotifiedMsgId) {
-                // Atualiza o ID para não notificar de novo
-                lastNotifiedMsgId = ultimaMensagem.id
-
-                // Busca o nome do cliente
-                val cliente = appState.clientes.find { it.id == ultimaMensagem.clienteId }
-                val nomeCliente = cliente?.nome ?: "Cliente"
-                val conteudo = ultimaMensagem.conteudo.take(40) // Limita o tamanho
-
-                // Lança o popup (Snackbar)
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = "Nova mensagem de $nomeCliente: $conteudo..."
-                    )
-                }
+        if (ultimaMensagem != null && ultimaMensagem.remetente == "cliente") {
+            val cliente = appState.clientes.find { it.id == ultimaMensagem.clienteId }
+            val nomeCliente = cliente?.nome ?: "Cliente"
+            val conteudo = ultimaMensagem.conteudo.take(40)
+            scope.launch {
+                snackbarHostState.showSnackbar("Nova mensagem de $nomeCliente: $conteudo...")
             }
         }
     }
-    // --- FIM DAS ADIÇÕES ---
 
 
-    val clientesFiltrados = appState.clientes.filter { cliente ->
+    val clientesFiltrados = customerViewModel.clientes.filter { cliente ->
         val matchBusca = cliente.nome.contains(busca, ignoreCase = true) ||
                 cliente.email.contains(busca, ignoreCase = true)
         val matchTag = filtroTag.isEmpty() || cliente.tags.contains(filtroTag)
@@ -193,6 +185,17 @@ fun CRMScreen(navController: NavController, appState: AppState) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                if (customerViewModel.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Color(0xFF2563EB))
+                        }
+                    }
+                }
+
                 items(clientesFiltrados) { cliente ->
                     ClienteCard(cliente) {
                         navController.navigate("chat/${cliente.id}")

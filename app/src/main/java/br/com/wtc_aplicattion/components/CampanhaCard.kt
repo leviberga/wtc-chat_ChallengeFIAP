@@ -1,6 +1,5 @@
 package br.com.wtc_aplicattion.components
 
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -19,9 +18,7 @@ fun CampanhaCard(campanha: Campanha) {
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF0F9FF)
-        )
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F9FF))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -40,7 +37,7 @@ fun CampanhaCard(campanha: Campanha) {
                     color = Color(0xFF2563EB).copy(alpha = 0.2f)
                 ) {
                     Text(
-                        campanha.segmento,
+                        campanha.segmentId ?: "Todos",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         color = Color(0xFF2563EB),
                         fontSize = 12.sp,
@@ -52,45 +49,25 @@ fun CampanhaCard(campanha: Campanha) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                campanha.body,
+                campanha.content,
                 fontSize = 14.sp,
                 color = Color(0xFF4B5563)
             )
 
-            if (campanha.url != null) {
+            if (campanha.deeplinkUrl != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "🔗 ${campanha.url}",
+                    "🔗 ${campanha.deeplinkUrl}",
                     fontSize = 12.sp,
                     color = Color(0xFF2563EB),
                     fontWeight = FontWeight.Medium
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                campanha.actions.forEach { action ->
-                    Button(
-                        onClick = { },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2563EB)
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(action.title, fontSize = 12.sp)
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                "📅 ${campanha.data}",
+                "📅 ${campanha.createdAt}",
                 fontSize = 11.sp,
                 color = Color.Gray
             )
