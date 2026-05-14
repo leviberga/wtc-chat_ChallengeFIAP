@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import br.com.wtc_aplicattion.models.Mensagem
 import br.com.wtc_aplicattion.services.TokenManager
 
@@ -15,6 +16,12 @@ import br.com.wtc_aplicattion.services.TokenManager
 fun MensagemClienteItem(mensagem: Mensagem) {
     val myEmail = TokenManager.getEmail()
     val isMe = mensagem.senderId == myEmail
+    val isPortal = mensagem.senderId.contains("portal-boas-vindas", ignoreCase = true)
+    val remetenteLabel = when {
+        isMe -> null
+        isPortal -> "WTC"
+        else -> "Atendimento"
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -32,6 +39,15 @@ fun MensagemClienteItem(mensagem: Mensagem) {
             )
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
+                remetenteLabel?.let {
+                    Text(
+                        it,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isMe) Color.White.copy(alpha = 0.85f) else Color(0xFF2563EB)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
                 Text(
                     mensagem.conteudo,
                     color = if (isMe) Color.White else Color(0xFF1F2937),

@@ -74,6 +74,12 @@ data class Segmento(
     val createdAt: String?
 )
 
+/** Corpo para POST /segments e PUT /segments/{id} */
+data class SegmentRequestBody(
+    val name: String,
+    val description: String? = null
+)
+
 data class LoginRequest(
     val email: String,
     val password: String

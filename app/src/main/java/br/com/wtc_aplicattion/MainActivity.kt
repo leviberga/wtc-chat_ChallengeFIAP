@@ -92,6 +92,10 @@ fun WTCApplicationApp() {
             }
         }
 
+        composable("segmentos") {
+            SegmentsScreen(navController = navController)
+        }
+
         composable("campanhas") {
             CampanhasScreen(navController = navController)
         }
@@ -105,7 +109,7 @@ fun WTCApplicationApp() {
 
         composable("perfil/{clienteId}") { backStackEntry ->
             val clienteId = backStackEntry.arguments?.getString("clienteId") ?: return@composable
-            val detailVm = remember { CustomerDetailViewModel() }
+            val detailVm = remember(clienteId) { CustomerDetailViewModel() }
 
             LaunchedEffect(clienteId) {
                 detailVm.load(clienteId)
@@ -117,7 +121,8 @@ fun WTCApplicationApp() {
                     PerfilClienteScreen(
                         navController = navController,
                         cliente = c,
-                        timeline = detailVm.timeline
+                        timeline = detailVm.timeline,
+                        detailVm = detailVm
                     )
                 }
                 detailVm.isLoading -> {
@@ -129,8 +134,15 @@ fun WTCApplicationApp() {
                     }
                 }
                 else -> {
-                    LaunchedEffect(Unit) {
+                    // Carga terminou sem cliente (erro de rede, 404, corpo vazio, etc.)
+                    LaunchedEffect(clienteId) {
                         navController.navigateUp()
+                    }
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
             }

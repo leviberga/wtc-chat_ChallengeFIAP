@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import br.com.wtc_aplicattion.components.ClienteCard
 import br.com.wtc_aplicattion.components.MenuItem
 import br.com.wtc_aplicattion.viewmodel.AppState
@@ -26,22 +27,22 @@ fun CRMScreen(navController: NavController, appState: AppState) {
     val authViewModel = remember { AuthViewModel() }
     val customerViewModel = remember { CustomerViewModel() }
 
-    LaunchedEffect(Unit) {
-        customerViewModel.loadClientes()
+    val navEntry by navController.currentBackStackEntryAsState()
+    val rotaAtual = navEntry?.destination?.route
+    // Recarrega ao voltar do perfil / chat / outras telas para tags e segmento refletirem o servidor.
+    LaunchedEffect(rotaAtual) {
+        if (rotaAtual == "crm") {
+            customerViewModel.loadClientes()
+        }
     }
 
     var busca by remember { mutableStateOf("") }
-    var filtroTag by remember { mutableStateOf("") }
-    var filtroStatus by remember { mutableStateOf("") }
     var menuAberto by remember { mutableStateOf(false) }
     var confirmarLogout by remember { mutableStateOf(false) }
 
     val clientesFiltrados = customerViewModel.clientes.filter { cliente ->
-        val matchBusca = cliente.nome.contains(busca, ignoreCase = true) ||
+        cliente.nome.contains(busca, ignoreCase = true) ||
             cliente.email.contains(busca, ignoreCase = true)
-        val matchTag = filtroTag.isEmpty() || cliente.tagsSeguras.contains(filtroTag)
-        val matchStatus = filtroStatus.isEmpty() || cliente.status == filtroStatus
-        matchBusca && matchTag && matchStatus
     }
 
     Scaffold(
@@ -86,7 +87,8 @@ fun CRMScreen(navController: NavController, appState: AppState) {
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF2563EB))
                 ) {
                     Column {
-                        MenuItem("📊 Dashboard") {
+                        MenuItem("📂 Segmentos") {
+                            navController.navigate("segmentos")
                             menuAberto = false
                         }
                         MenuItem("📢 Campanhas Express") {
@@ -113,40 +115,10 @@ fun CRMScreen(navController: NavController, appState: AppState) {
                         value = busca,
                         onValueChange = { busca = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Buscar cliente...") },
+                        placeholder = { Text("Buscar por nome ou e-mail...") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         singleLine = true
                     )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = filtroTag.isEmpty(),
-                            onClick = { filtroTag = "" },
-                            label = { Text("Todos") }
-                        )
-                        FilterChip(
-                            selected = filtroTag == "VIP",
-                            onClick = { filtroTag = if (filtroTag == "VIP") "" else "VIP" },
-                            label = { Text("VIP") }
-                        )
-                        FilterChip(
-                            selected = filtroTag == "Premium",
-                            onClick = { filtroTag = if (filtroTag == "Premium") "" else "Premium" },
-                            label = { Text("Premium") }
-                        )
-                        FilterChip(
-                            selected = filtroStatus == "ACTIVE",
-                            onClick = {
-                                filtroStatus = if (filtroStatus == "ACTIVE") "" else "ACTIVE"
-                            },
-                            label = { Text("Ativos") }
-                        )
-                    }
                 }
             }
 

@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,9 +30,7 @@ fun ClienteCard(
     onOpenProfile: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onOpenChat),
+        modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F9F9))
@@ -43,7 +41,11 @@ fun ClienteCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onOpenChat)
+                ) {
                     Text(
                         cliente.nome,
                         fontSize = 18.sp,
@@ -58,13 +60,14 @@ fun ClienteCard(
 
                 IconButton(onClick = onOpenProfile) {
                     Icon(
-                        Icons.Default.Person,
-                        contentDescription = "Perfil 360°",
+                        Icons.Filled.AccountCircle,
+                        contentDescription = "Perfil CRM — segmento e tags",
                         tint = Color(0xFF2563EB)
                     )
                 }
 
                 Surface(
+                    modifier = Modifier.clickable(onClick = onOpenChat),
                     shape = CircleShape,
                     color = when {
                         cliente.scoreSeguro >= 90 -> Color(0xFF10B981)
@@ -84,7 +87,29 @@ fun ClienteCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenChat),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val segmentoLabel = cliente.segmentName?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: if (!cliente.segmentId.isNullOrBlank()) "Segmento" else null
+                if (segmentoLabel != null) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF7C3AED).copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            "📂 $segmentoLabel",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            color = Color(0xFF7C3AED),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
                 cliente.tagsSeguras.forEach { tag ->
                     Surface(
                         shape = RoundedCornerShape(8.dp),
@@ -120,20 +145,26 @@ fun ClienteCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                "📱 ${cliente.telefone ?: "—"}",
-                fontSize = 12.sp,
-                color = Color.Gray
-            )
-
-            if (!cliente.notes.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenChat)
+            ) {
                 Text(
-                    "📝 ${cliente.notes}",
+                    "📱 ${cliente.telefone ?: "—"}",
                     fontSize = 12.sp,
-                    color = Color(0xFF4F46E5),
-                    fontWeight = FontWeight.Medium
+                    color = Color.Gray
                 )
+
+                if (!cliente.notes.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "📝 ${cliente.notes}",
+                        fontSize = 12.sp,
+                        color = Color(0xFF4F46E5),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }

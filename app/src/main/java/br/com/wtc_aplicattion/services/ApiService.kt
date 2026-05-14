@@ -90,4 +90,23 @@ interface ApiService {
     suspend fun getSegments(
         @Header("Authorization") token: String
     ): Response<List<Segmento>>
+
+    @POST("segments")
+    suspend fun createSegment(
+        @Header("Authorization") token: String,
+        @Body body: SegmentRequestBody
+    ): Response<Segmento>
+
+    @PUT("segments/{id}")
+    suspend fun updateSegment(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Body body: SegmentRequestBody
+    ): Response<Segmento>
+
+    @DELETE("segments/{id}")
+    suspend fun deleteSegment(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<Unit>
 }

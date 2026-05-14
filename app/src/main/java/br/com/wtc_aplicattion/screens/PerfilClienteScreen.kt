@@ -10,6 +10,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,20 +25,39 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import br.com.wtc_aplicattion.models.Cliente
 import br.com.wtc_aplicattion.models.TimelineResponse
+import br.com.wtc_aplicattion.viewmodel.CustomerDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilClienteScreen(
     navController: NavController,
     cliente: Cliente,
-    timeline: TimelineResponse?
+    timeline: TimelineResponse?,
+    detailVm: CustomerDetailViewModel
 ) {
     val scroll = rememberScrollState()
+    var tagInput by remember(cliente.id) {
+        mutableStateOf(cliente.tagsSeguras.joinToString(", "))
+    }
+    var selectedSegmentId by remember(cliente.id) {
+        mutableStateOf(cliente.segmentId)
+    }
+    var segmentMenuExpanded by remember { mutableStateOf(false) }
+    var crmFeedback by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        detailVm.loadSegments()
+    }
+
+    LaunchedEffect(cliente.tagsSeguras, cliente.segmentId, cliente.id) {
+        tagInput = cliente.tagsSeguras.joinToString(", ")
+        selectedSegmentId = cliente.segmentId
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Perfil 360°", fontWeight = FontWeight.Bold) },
+                title = { Text("Perfil CRM", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
@@ -109,12 +133,12 @@ fun PerfilClienteScreen(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     InfoRow("Telefone", cliente.telefone ?: "—", Icons.Default.Phone)
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    InfoRow("Segmento", cliente.segmentName ?: "—", Icons.Default.Category)
+                    InfoRow("Segmento atual", cliente.segmentName ?: "—", Icons.Default.Category)
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     InfoRow("Status", cliente.status, Icons.Default.CheckCircle)
                     if (!cliente.notes.isNullOrBlank()) {
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        InfoRow("Notas CRM", cliente.notes!!, Icons.Default.Info)
+                        InfoRow("Notas CRM", cliente.notes, Icons.Default.Info)
                     }
                 }
             }
@@ -126,21 +150,116 @@ fun PerfilClienteScreen(
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Tags", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        cliente.tagsSeguras.forEach { tag ->
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFF2563EB).copy(alpha = 0.1f)
-                            ) {
-                                Text(
-                                    tag,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    color = Color(0xFF2563EB),
-                                    fontWeight = FontWeight.Medium
+                    Text("Classificação CRM", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        "Defina o segmento e as tags deste cliente.",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text("Segmento", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = segmentMenuExpanded,
+                        onExpandedChange = { segmentMenuExpanded = !segmentMenuExpanded }
+                    ) {
+                        val label = when (val segId = selectedSegmentId) {
+                            null -> "Sem segmento"
+                            else -> detailVm.segmentos.find { it.id == segId }?.name ?: segId
+                        }
+                        OutlinedTextField(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            readOnly = true,
+                            value = label,
+                            onValueChange = {},
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = segmentMenuExpanded) }
+                        )
+                        ExposedDropdownMenu(
+                            expanded = segmentMenuExpanded,
+                            onDismissRequest = { segmentMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Sem segmento") },
+                                onClick = {
+                                    selectedSegmentId = null
+                                    segmentMenuExpanded = false
+                                    crmFeedback = null
+                                }
+                            )
+                            detailVm.segmentos.forEach { seg ->
+                                DropdownMenuItem(
+                                    text = { Text("${seg.name} (${seg.customerCount})") },
+                                    onClick = {
+                                        selectedSegmentId = seg.id
+                                        segmentMenuExpanded = false
+                                        crmFeedback = null
+                                    }
                                 )
                             }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Tags", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                    Text(
+                        "Separe por vírgula (ex.: vip, finance)",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = tagInput,
+                        onValueChange = {
+                            tagInput = it
+                            crmFeedback = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("vip, finance") },
+                        singleLine = false,
+                        minLines = 2
+                    )
+
+                    crmFeedback?.let {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            it,
+                            color = if (it == "Dados salvos.") Color(0xFF059669) else Color.Red,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Não há segmentos? Use o menu do CRM → Segmentos para criar.",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            val tags = tagInput.split(",")
+                                .map { s -> s.trim() }
+                                .filter { s -> s.isNotEmpty() }
+                            detailVm.saveCrmFields(cliente.id, tags, selectedSegmentId) { ok, err ->
+                                crmFeedback = if (ok) "Dados salvos." else (err ?: "Erro ao salvar")
+                            }
+                        },
+                        enabled = !detailVm.isSaving,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (detailVm.isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Salvar segmento e tags")
                         }
                     }
                 }
