@@ -125,6 +125,24 @@ fun LoginScreen(navController: NavController, appState: AppState) {
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                if (authViewModel.isSignUpMode) {
+                    OutlinedTextField(
+                        value = authViewModel.name,
+                        onValueChange = authViewModel::updateName,
+                        label = { Text("Nome completo") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Person, contentDescription = null)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF2563EB),
+                            focusedLabelColor = Color(0xFF2563EB)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 // Campo de Email
                 OutlinedTextField(
                     value = authViewModel.email,

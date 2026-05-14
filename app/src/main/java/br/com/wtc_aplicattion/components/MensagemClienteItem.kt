@@ -9,38 +9,39 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.wtc_aplicattion.models.Mensagem
+import br.com.wtc_aplicattion.services.TokenManager
 
 @Composable
 fun MensagemClienteItem(mensagem: Mensagem) {
+    val myEmail = TokenManager.getEmail()
+    val isMe = mensagem.senderId == myEmail
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (mensagem.remetente == "cliente")
-            Arrangement.End else Arrangement.Start
+        horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
     ) {
         Card(
             modifier = Modifier.widthIn(max = 280.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (mensagem.remetente == "cliente")
-                    Color(0xFF4F46E5) else Color(0xFFF3F4F6)
+                containerColor = if (isMe) Color(0xFF4F46E5) else Color(0xFFF3F4F6)
             ),
             shape = RoundedCornerShape(
                 topStart = 16.dp, topEnd = 16.dp,
-                bottomStart = if (mensagem.remetente == "cliente") 16.dp else 4.dp,
-                bottomEnd = if (mensagem.remetente == "cliente") 4.dp else 16.dp
+                bottomStart = if (isMe) 16.dp else 4.dp,
+                bottomEnd = if (isMe) 4.dp else 16.dp
             )
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     mensagem.conteudo,
-                    color = if (mensagem.remetente == "cliente") Color.White else Color(0xFF1F2937),
+                    color = if (isMe) Color.White else Color(0xFF1F2937),
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     mensagem.timestamp,
                     fontSize = 10.sp,
-                    color = if (mensagem.remetente == "cliente")
-                        Color.White.copy(alpha = 0.7f) else Color.Gray
+                    color = if (isMe) Color.White.copy(alpha = 0.7f) else Color.Gray
                 )
             }
         }

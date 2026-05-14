@@ -9,8 +9,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,19 +25,37 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import br.com.wtc_aplicattion.viewmodel.AppState
 import br.com.wtc_aplicattion.components.MensagemItem
 import br.com.wtc_aplicattion.models.Cliente
-import br.com.wtc_aplicattion.models.Mensagem
+import br.com.wtc_aplicattion.models.CustomerUpdateRequest
+import br.com.wtc_aplicattion.services.RetrofitClient
+import br.com.wtc_aplicattion.services.TokenManager
+import br.com.wtc_aplicattion.viewmodel.ConversationViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(navController: NavController, appState: AppState, cliente: Cliente) {
+fun ChatScreen(navController: NavController, cliente: Cliente) {
     var novaMensagem by remember { mutableStateOf("") }
     var mostrarNotas by remember { mutableStateOf(false) }
-    var notasTemp by remember { mutableStateOf(cliente.notas ?: "") }
+    var notasTemp by remember(cliente.id) { mutableStateOf(cliente.notes ?: "") }
+    var salvandoNotas by remember { mutableStateOf(false) }
+    var erroNotas by remember { mutableStateOf<String?>(null) }
 
-    val mensagensCliente = appState.mensagens.filter { it.clienteId == cliente.id }
+    val conversationViewModel = remember { ConversationViewModel() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(cliente.id) {
+        notasTemp = cliente.notes ?: ""
+        conversationViewModel.loadMensagens(cliente.id, asOperator = true)
+        conversationViewModel.startPolling(cliente.id, asOperator = true)
+    }
+
+    DisposableEffect(cliente.id) {
+        onDispose {
+            conversationViewModel.stopPolling()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -46,7 +69,7 @@ fun ChatScreen(navController: NavController, appState: AppState, cliente: Client
                                     .size(8.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        if (cliente.status == "Ativo") Color(0xFF10B981)
+                                        if (cliente.status == "ACTIVE") Color(0xFF10B981)
                                         else Color(0xFF6B7280)
                                     )
                             )
@@ -94,9 +117,7 @@ fun ChatScreen(navController: NavController, appState: AppState, cliente: Client
                         shape = RoundedCornerShape(24.dp),
                         maxLines = 3
                     )
-
                     Spacer(modifier = Modifier.width(8.dp))
-
                     FloatingActionButton(
                         onClick = {
                             if (novaMensagem.isNotBlank()) {
@@ -109,21 +130,13 @@ fun ChatScreen(navController: NavController, appState: AppState, cliente: Client
                                         "🙏 Obrigado por sua preferência! Estamos sempre à disposição."
                                     else -> novaMensagem
                                 }
-
-                                appState.mensagens.add(
-                                    Mensagem(
-                                          id = (appState.mensagens.size + 1).toString(),
-                                          conversationId = cliente.id,
-                                          senderId = "operador",
-                                          conteudo = conteudo,
-                                          tipo = "TEXT",
-                                          mediaUrl = null,
-                                          deeplinkUrl = null,
-                                          status = "SENT",
-                                          timestamp = AppState.getCurrentTime()
-                                    )
-                                )
-                                novaMensagem = ""
+                                conversationViewModel.enviarMensagem(
+                                    cliente.id,
+                                    conteudo,
+                                    asOperator = true
+                                ) {
+                                    novaMensagem = ""
+                                }
                             }
                         },
                         containerColor = Color(0xFF2563EB)
@@ -135,45 +148,112 @@ fun ChatScreen(navController: NavController, appState: AppState, cliente: Client
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(mensagensCliente) { mensagem ->
-                    MensagemItem(mensagem, appState)
+            if (conversationViewModel.isLoading && conversationViewModel.mensagens.isEmpty()) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = Color(0xFF2563EB)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(conversationViewModel.mensagens) { mensagem ->
+                        MensagemItem(mensagem)
+                    }
                 }
             }
 
-            // Dialog de Notas
+            conversationViewModel.errorMessage?.let { err ->
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2937))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(err, color = Color.White, fontSize = 13.sp)
+                        TextButton(onClick = { conversationViewModel.clearError() }) {
+                            Text("OK", color = Color.White)
+                        }
+                    }
+                }
+            }
+
             if (mostrarNotas) {
                 AlertDialog(
                     onDismissRequest = { mostrarNotas = false },
                     title = { Text("Notas do Cliente") },
                     text = {
-                        OutlinedTextField(
-                            value = notasTemp,
-                            onValueChange = { notasTemp = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Adicione observações sobre o cliente...") },
-                            minLines = 4
-                        )
+                        Column {
+                            if (erroNotas != null) {
+                                Text(erroNotas!!, color = Color.Red, fontSize = 13.sp)
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                            OutlinedTextField(
+                                value = notasTemp,
+                                onValueChange = { notasTemp = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("Adicione observações sobre o cliente...") },
+                                minLines = 4
+                            )
+                        }
                     },
                     confirmButton = {
-                        Button(onClick = {
-                            cliente.notas = notasTemp
-                            mostrarNotas = false
-                        }) {
-                            Text("Salvar")
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    salvandoNotas = true
+                                    erroNotas = null
+                                    try {
+                                        val token = TokenManager.getBearerToken() ?: return@launch
+                                        val body = CustomerUpdateRequest(
+                                            name = cliente.nome,
+                                            email = cliente.email,
+                                            phone = cliente.telefone,
+                                            segmentId = cliente.segmentId,
+                                            tags = cliente.tagsSeguras,
+                                            score = cliente.scoreSeguro,
+                                            customerStatus = cliente.status,
+                                            notes = notasTemp.ifBlank { null }
+                                        )
+                                        val r = RetrofitClient.instance.updateCustomer(
+                                            token,
+                                            cliente.id,
+                                            body
+                                        )
+                                        if (r.isSuccessful) {
+                                            mostrarNotas = false
+                                        } else {
+                                            erroNotas = r.errorBody()?.string()?.take(120)
+                                                ?: "Erro ao salvar"
+                                        }
+                                    } catch (e: Exception) {
+                                        erroNotas = e.message
+                                    } finally {
+                                        salvandoNotas = false
+                                    }
+                                }
+                            },
+                            enabled = !salvandoNotas
+                        ) {
+                            if (salvandoNotas) CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                            else Text("Salvar")
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = {
-                            notasTemp = cliente.notas ?: ""
-                            mostrarNotas = false
-                        }) {
+                        TextButton(onClick = { mostrarNotas = false }) {
                             Text("Cancelar")
                         }
                     }
@@ -181,5 +261,4 @@ fun ChatScreen(navController: NavController, appState: AppState, cliente: Client
             }
         }
     }
-
-    }
+}

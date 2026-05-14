@@ -1,6 +1,5 @@
 package br.com.wtc_aplicattion.screens
 
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,51 +14,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import br.com.wtc_aplicattion.viewmodel.AppState
-import br.com.wtc_aplicattion.viewmodel.AuthViewModel
-
 import br.com.wtc_aplicattion.components.ClienteCard
 import br.com.wtc_aplicattion.components.MenuItem
+import br.com.wtc_aplicattion.viewmodel.AppState
+import br.com.wtc_aplicattion.viewmodel.AuthViewModel
 import br.com.wtc_aplicattion.viewmodel.CustomerViewModel
-import kotlinx.coroutines.launch // <-- IMPORTAR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CRMScreen(navController: NavController, appState: AppState) {
     val authViewModel = remember { AuthViewModel() }
     val customerViewModel = remember { CustomerViewModel() }
+
     LaunchedEffect(Unit) {
         customerViewModel.loadClientes()
     }
+
     var busca by remember { mutableStateOf("") }
     var filtroTag by remember { mutableStateOf("") }
     var filtroStatus by remember { mutableStateOf("") }
     var menuAberto by remember { mutableStateOf(false) }
-
-
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    // Armazena o ID da última mensagem de cliente que gerou notificação
-    var lastNotifiedMsgId by remember { mutableStateOf(-1) }
-
-    // Efeito que observa mudanças na lista de mensagens
-    LaunchedEffect(appState.mensagens.size) {
-        val ultimaMensagem = appState.mensagens.lastOrNull()
-        if (ultimaMensagem != null && ultimaMensagem.remetente == "cliente") {
-            val cliente = appState.clientes.find { it.id == ultimaMensagem.clienteId }
-            val nomeCliente = cliente?.nome ?: "Cliente"
-            val conteudo = ultimaMensagem.conteudo.take(40)
-            scope.launch {
-                snackbarHostState.showSnackbar("Nova mensagem de $nomeCliente: $conteudo...")
-            }
-        }
-    }
-
+    var confirmarLogout by remember { mutableStateOf(false) }
 
     val clientesFiltrados = customerViewModel.clientes.filter { cliente ->
         val matchBusca = cliente.nome.contains(busca, ignoreCase = true) ||
-                cliente.email.contains(busca, ignoreCase = true)
-        val matchTag = filtroTag.isEmpty() || cliente.tags.contains(filtroTag)
+            cliente.email.contains(busca, ignoreCase = true)
+        val matchTag = filtroTag.isEmpty() || cliente.tagsSeguras.contains(filtroTag)
         val matchStatus = filtroStatus.isEmpty() || cliente.status == filtroStatus
         matchBusca && matchTag && matchStatus
     }
@@ -91,17 +71,13 @@ fun CRMScreen(navController: NavController, appState: AppState) {
                     }
                 }
             )
-        },
-        // --- ADIÇÃO DO SNACKBARHOST ---
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-        // --- FIM DA ADIÇÃO ---
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Menu Dropdown
             if (menuAberto) {
                 Card(
                     modifier = Modifier
@@ -118,25 +94,19 @@ fun CRMScreen(navController: NavController, appState: AppState) {
                             menuAberto = false
                         }
                         MenuItem("🚪 Sair") {
-                            authViewModel.signOut()
-                            appState.usuarioLogado = null
-                            navController.navigate("login") {
-                                popUpTo(0) { inclusive = true }
-                            }
                             menuAberto = false
+                            confirmarLogout = true
                         }
                     }
                 }
             }
 
-            // Busca
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 elevation = CardDefaults.cardElevation(2.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F9F9)
-                )
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F9F9))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     OutlinedTextField(
@@ -150,7 +120,6 @@ fun CRMScreen(navController: NavController, appState: AppState) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Filtros
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -171,15 +140,16 @@ fun CRMScreen(navController: NavController, appState: AppState) {
                             label = { Text("Premium") }
                         )
                         FilterChip(
-                            selected = filtroStatus == "Ativo",
-                            onClick = { filtroStatus = if (filtroStatus == "Ativo") "" else "Ativo" },
+                            selected = filtroStatus == "ACTIVE",
+                            onClick = {
+                                filtroStatus = if (filtroStatus == "ACTIVE") "" else "ACTIVE"
+                            },
                             label = { Text("Ativos") }
                         )
                     }
                 }
             }
 
-            // Lista de Clientes
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
@@ -197,11 +167,40 @@ fun CRMScreen(navController: NavController, appState: AppState) {
                 }
 
                 items(clientesFiltrados) { cliente ->
-                    ClienteCard(cliente) {
-                        navController.navigate("chat/${cliente.id}")
-                    }
+                    ClienteCard(
+                        cliente = cliente,
+                        onOpenChat = { navController.navigate("chat/${cliente.id}") },
+                        onOpenProfile = { navController.navigate("perfil/${cliente.id}") }
+                    )
                 }
             }
         }
+    }
+
+    if (confirmarLogout) {
+        AlertDialog(
+            onDismissRequest = { confirmarLogout = false },
+            title = { Text("Sair") },
+            text = { Text("Tem certeza que deseja sair?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        authViewModel.signOut()
+                        appState.logout()
+                        confirmarLogout = false
+                        navController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                ) {
+                    Text("Sair", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmarLogout = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }

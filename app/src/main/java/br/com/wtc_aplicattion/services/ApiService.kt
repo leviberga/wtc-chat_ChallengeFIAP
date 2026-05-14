@@ -6,14 +6,12 @@ import retrofit2.http.*
 
 interface ApiService {
 
-    // Auth
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
     @POST("auth/register")
-    suspend fun register(@Body request: LoginRequest): Response<AuthResponse>
+    suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
 
-    // Customers
     @GET("customers")
     suspend fun getCustomers(
         @Header("Authorization") token: String,
@@ -27,32 +25,67 @@ interface ApiService {
         @Path("id") id: String
     ): Response<Cliente>
 
-    // Messages
+    @GET("customers/{id}/timeline")
+    suspend fun getTimeline(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<TimelineResponse>
+
+    @PUT("customers/{id}")
+    suspend fun updateCustomer(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Body body: CustomerUpdateRequest
+    ): Response<Cliente>
+
+    @GET("conversations/{conversationId}/messages")
+    suspend fun getConversationMessages(
+        @Header("Authorization") token: String,
+        @Path("conversationId") conversationId: String
+    ): Response<List<Mensagem>>
+
     @POST("messages")
     suspend fun sendMessage(
         @Header("Authorization") token: String,
-        @Body request: Map<String, Any>
+        @Body request: MessageSendRequest
     ): Response<List<Mensagem>>
+
+    @GET("messages/{id}")
+    suspend fun getMessageById(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<Mensagem>
+
+    @PATCH("messages/{id}/status")
+    suspend fun updateMessageStatus(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Query("status") status: String
+    ): Response<Mensagem>
 
     @GET("inbox/{customerId}")
     suspend fun getInbox(
         @Header("Authorization") token: String,
         @Path("customerId") customerId: String
-    ): Response<List<Any>>
+    ): Response<List<InboxItem>>
 
-    // Campaigns
     @GET("campaigns")
     suspend fun getCampaigns(
         @Header("Authorization") token: String
     ): Response<List<Campanha>>
 
+    @GET("campaigns/{id}")
+    suspend fun getCampaignById(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<Campanha>
+
     @POST("campaigns")
     suspend fun createCampaign(
         @Header("Authorization") token: String,
-        @Body campaign: Map<String, Any>
+        @Body body: CampaignCreateRequest
     ): Response<Campanha>
 
-    // Segments
     @GET("segments")
     suspend fun getSegments(
         @Header("Authorization") token: String

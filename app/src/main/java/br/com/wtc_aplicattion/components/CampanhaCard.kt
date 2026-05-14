@@ -37,7 +37,7 @@ fun CampanhaCard(campanha: Campanha) {
                     color = Color(0xFF2563EB).copy(alpha = 0.2f)
                 ) {
                     Text(
-                        campanha.segmentId ?: "Todos",
+                        campanha.campaignStatus,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         color = Color(0xFF2563EB),
                         fontSize = 12.sp,
@@ -67,7 +67,7 @@ fun CampanhaCard(campanha: Campanha) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                "📅 ${campanha.createdAt}",
+                "📅 ${campanha.sentAt ?: campanha.createdAt ?: "—"}",
                 fontSize = 11.sp,
                 color = Color.Gray
             )

@@ -15,17 +15,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import br.com.wtc_aplicattion.components.CampanhaCard
-import br.com.wtc_aplicattion.models.Campanha
-import br.com.wtc_aplicattion.viewmodel.AppState
-import br.com.wtc_aplicattion.viewmodel.AppState.Companion.getCurrentTime
+import br.com.wtc_aplicattion.viewmodel.CampaignViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CampanhasScreen(navController: NavController, appState: AppState) {
+fun CampanhasScreen(navController: NavController) {
+    val campaignVm = remember { CampaignViewModel() }
+
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
-    var segmentId by remember { mutableStateOf("") }
+    var segmentId by remember { mutableStateOf<String?>(null) }
+    var expandedSeg by remember { mutableStateOf(false) }
     var deeplinkUrl by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        campaignVm.loadCampaignsAndSegments()
+    }
 
     Scaffold(
         topBar = {
@@ -83,13 +88,36 @@ fun CampanhasScreen(navController: NavController, appState: AppState) {
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        OutlinedTextField(
-                            value = segmentId,
-                            onValueChange = { segmentId = it },
-                            label = { Text("ID do Segmento (opcional)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
+                        ExposedDropdownMenuBox(
+                            expanded = expandedSeg,
+                            onExpandedChange = { expandedSeg = !expandedSeg }
+                        ) {
+                            OutlinedTextField(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(),
+                                readOnly = true,
+                                value = campaignVm.segmentos.find { it.id == segmentId }?.name
+                                    ?: "Selecione o segmento",
+                                onValueChange = {},
+                                label = { Text("Segmento") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSeg) }
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expandedSeg,
+                                onDismissRequest = { expandedSeg = false }
+                            ) {
+                                campaignVm.segmentos.forEach { seg ->
+                                    DropdownMenuItem(
+                                        text = { Text("${seg.name} (${seg.customerCount})") },
+                                        onClick = {
+                                            segmentId = seg.id
+                                            expandedSeg = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -102,26 +130,27 @@ fun CampanhasScreen(navController: NavController, appState: AppState) {
                             placeholder = { Text("https://wtc.com/evento") }
                         )
 
+                        campaignVm.errorMessage?.let {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(it, color = Color.Red, fontSize = 13.sp)
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Button(
                             onClick = {
                                 if (title.isNotBlank() && content.isNotBlank()) {
-                                    val novaCampanha = Campanha(
-                                        id = (appState.campanhas.size + 1).toString(),
+                                    campaignVm.createCampaign(
                                         title = title,
                                         content = content,
-                                        segmentId = segmentId.ifBlank { null },
-                                        deeplinkUrl = deeplinkUrl.ifBlank { null },
-                                        status = "SENT",
-                                        scheduledAt = null,
-                                        createdAt = getCurrentTime()
-                                    )
-                                    appState.campanhas.add(novaCampanha)
-                                    title = ""
-                                    content = ""
-                                    segmentId = ""
-                                    deeplinkUrl = ""
+                                        segmentId = segmentId,
+                                        deeplinkUrl = deeplinkUrl
+                                    ) {
+                                        title = ""
+                                        content = ""
+                                        segmentId = null
+                                        deeplinkUrl = ""
+                                    }
                                 }
                             },
                             modifier = Modifier
@@ -129,7 +158,8 @@ fun CampanhasScreen(navController: NavController, appState: AppState) {
                                 .height(48.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFF2563EB)
-                            )
+                            ),
+                            enabled = !campaignVm.isLoading
                         ) {
                             Icon(Icons.Default.Send, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -141,14 +171,14 @@ fun CampanhasScreen(navController: NavController, appState: AppState) {
 
             item {
                 Text(
-                    "Campanhas Enviadas",
+                    "Campanhas",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1F2937)
                 )
             }
 
-            items(appState.campanhas.reversed()) { campanha ->
+            items(campaignVm.campanhas.reversed()) { campanha ->
                 CampanhaCard(campanha)
             }
         }

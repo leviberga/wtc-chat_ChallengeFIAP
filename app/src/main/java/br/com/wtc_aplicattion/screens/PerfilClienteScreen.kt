@@ -2,12 +2,14 @@ package br.com.wtc_aplicattion.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -17,22 +19,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import br.com.wtc_aplicattion.models.Cliente
-import br.com.wtc_aplicattion.viewmodel.AppState
+import br.com.wtc_aplicattion.models.TimelineResponse
 
-/**
- * Tela de Perfil do Cliente com informações detalhadas
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilClienteScreen(
     navController: NavController,
-    appState: AppState,
-    cliente: Cliente
+    cliente: Cliente,
+    timeline: TimelineResponse?
 ) {
+    val scroll = rememberScrollState()
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Perfil do Cliente", fontWeight = FontWeight.Bold) },
+                title = { Text("Perfil 360°", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(
@@ -53,10 +54,10 @@ fun PerfilClienteScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(scroll),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Avatar
             Box(
                 modifier = Modifier
                     .size(100.dp)
@@ -65,7 +66,7 @@ fun PerfilClienteScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    cliente.nome.first().uppercase(),
+                    (cliente.nome.firstOrNull() ?: '?').uppercase(),
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -74,25 +75,23 @@ fun PerfilClienteScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Nome
             Text(
                 cliente.nome,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            // Score Badge
             Spacer(modifier = Modifier.height(8.dp))
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = when {
-                    cliente.score >= 90 -> Color(0xFF10B981)
-                    cliente.score >= 70 -> Color(0xFFF59E0B)
+                    cliente.scoreSeguro >= 90 -> Color(0xFF10B981)
+                    cliente.scoreSeguro >= 70 -> Color(0xFFF59E0B)
                     else -> Color(0xFFEF4444)
                 }
             ) {
                 Text(
-                    "Score: ${cliente.score}",
+                    "Score: ${cliente.scoreSeguro}",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     color = Color.White,
                     fontWeight = FontWeight.Bold
@@ -101,24 +100,27 @@ fun PerfilClienteScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Informações
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     InfoRow("Email", cliente.email, Icons.Default.Email)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    InfoRow("Telefone", cliente.telefone, Icons.Default.Phone)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    InfoRow("Telefone", cliente.telefone ?: "—", Icons.Default.Phone)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    InfoRow("Segmento", cliente.segmentName ?: "—", Icons.Default.Category)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     InfoRow("Status", cliente.status, Icons.Default.CheckCircle)
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    if (!cliente.notes.isNullOrBlank()) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        InfoRow("Notas CRM", cliente.notes!!, Icons.Default.Info)
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tags
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp)
@@ -127,7 +129,7 @@ fun PerfilClienteScreen(
                     Text("Tags", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        cliente.tags.forEach { tag ->
+                        cliente.tagsSeguras.forEach { tag ->
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = Color(0xFF2563EB).copy(alpha = 0.1f)
@@ -144,9 +146,26 @@ fun PerfilClienteScreen(
                 }
             }
 
+            timeline?.lastMessages?.takeIf { it.isNotEmpty() }?.let { msgs ->
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Últimas mensagens (timeline)", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        msgs.forEach { m ->
+                            Text("• ${m.content}", fontSize = 13.sp, color = Color(0xFF374151))
+                            Text(m.sentAt ?: "", fontSize = 11.sp, color = Color.Gray)
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botão de Chat
             Button(
                 onClick = { navController.navigate("chat/${cliente.id}") },
                 modifier = Modifier
@@ -158,7 +177,7 @@ fun PerfilClienteScreen(
             ) {
                 Icon(Icons.Default.Send, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Iniciar Conversa")
+                Text("Abrir conversa")
             }
         }
     }

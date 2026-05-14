@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.wtc_aplicattion.models.LoginRequest
+import br.com.wtc_aplicattion.models.RegisterRequest
 import br.com.wtc_aplicattion.models.TipoUsuario
 import br.com.wtc_aplicattion.models.Usuario
 import br.com.wtc_aplicattion.services.RetrofitClient
@@ -26,6 +27,9 @@ class AuthViewModel : ViewModel() {
         private set
 
     var errorMessage by mutableStateOf<String?>(null)
+        private set
+
+    var name by mutableStateOf("")
         private set
 
     var email by mutableStateOf("")
@@ -49,7 +53,9 @@ class AuthViewModel : ViewModel() {
         if (token != null) {
             isLoggedIn = true
             currentUser = Usuario(
-                nome = TokenManager.getEmail() ?: "Usuário",
+                nome = TokenManager.getDisplayName()
+                    ?: TokenManager.getEmail()?.substringBefore("@")
+                    ?: "Usuário",
                 tipo = if (TokenManager.getRole() == "OPERATOR") TipoUsuario.OPERADOR else TipoUsuario.CLIENTE
             )
         }
@@ -69,7 +75,14 @@ class AuthViewModel : ViewModel() {
                 val response = api.login(LoginRequest(email, password))
                 if (response.isSuccessful) {
                     val body = response.body()!!
-                    TokenManager.saveToken(body.token, body.refreshToken, body.email, body.role)
+                    TokenManager.saveSession(
+                        token = body.token,
+                        refreshToken = body.refreshToken,
+                        email = body.email,
+                        role = body.role,
+                        userId = body.userId,
+                        displayName = body.name
+                    )
                     currentUser = Usuario(
                         nome = body.name,
                         tipo = if (body.role == "OPERATOR") TipoUsuario.OPERADOR else TipoUsuario.CLIENTE
@@ -87,6 +100,10 @@ class AuthViewModel : ViewModel() {
     }
 
     fun signUp() {
+        if (name.isBlank()) {
+            errorMessage = "Nome é obrigatório"
+            return
+        }
         if (email.isBlank() || password.isBlank()) {
             errorMessage = "Email e senha são obrigatórios"
             return
@@ -107,10 +124,24 @@ class AuthViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val response = api.register(LoginRequest(email, password))
+                val response = api.register(
+                    RegisterRequest(
+                        name = name.trim(),
+                        email = email.trim(),
+                        password = password,
+                        role = null
+                    )
+                )
                 if (response.isSuccessful) {
                     val body = response.body()!!
-                    TokenManager.saveToken(body.token, body.refreshToken, body.email, body.role)
+                    TokenManager.saveSession(
+                        token = body.token,
+                        refreshToken = body.refreshToken,
+                        email = body.email,
+                        role = body.role,
+                        userId = body.userId,
+                        displayName = body.name
+                    )
                     currentUser = Usuario(
                         nome = body.name,
                         tipo = if (body.role == "OPERATOR") TipoUsuario.OPERADOR else TipoUsuario.CLIENTE
@@ -134,10 +165,36 @@ class AuthViewModel : ViewModel() {
         clearFields()
     }
 
-    fun updateEmail(newEmail: String) { email = newEmail }
-    fun updatePassword(newPassword: String) { password = newPassword }
-    fun updateConfirmPassword(newConfirmPassword: String) { confirmPassword = newConfirmPassword }
-    fun toggleSignUpMode() { isSignUpMode = !isSignUpMode; clearFields() }
-    fun clearFields() { email = ""; password = ""; confirmPassword = ""; errorMessage = null }
-    fun clearError() { errorMessage = null }
+    fun updateName(newName: String) {
+        name = newName
+    }
+
+    fun updateEmail(newEmail: String) {
+        email = newEmail
+    }
+
+    fun updatePassword(newPassword: String) {
+        password = newPassword
+    }
+
+    fun updateConfirmPassword(newConfirmPassword: String) {
+        confirmPassword = newConfirmPassword
+    }
+
+    fun toggleSignUpMode() {
+        isSignUpMode = !isSignUpMode
+        clearFields()
+    }
+
+    fun clearFields() {
+        name = ""
+        email = ""
+        password = ""
+        confirmPassword = ""
+        errorMessage = null
+    }
+
+    fun clearError() {
+        errorMessage = null
+    }
 }
